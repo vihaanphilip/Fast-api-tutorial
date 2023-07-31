@@ -26,7 +26,7 @@ class Book(BaseModel):
     description: str = Field(min_length=1, max_length=100)
     rating: int = Field(ge=1, le=101)
 
-BOOKS = []
+# BOOKS = []
 
 @app.get("/")
 def read_api(db: Session = Depends(get_db)):
