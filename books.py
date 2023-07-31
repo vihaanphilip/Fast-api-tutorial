@@ -1,14 +1,27 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
 from uuid import UUID
+
+import models
+from database import engine, SessionLocal
+from sqlalchemy.orm import Session
 
 # to run type:
 # uvicorn books:app --reload
 
 app = FastAPI()
 
+models.Base.metadata.create_all(bind=engine)
+
+def get_db():
+    try:
+        db = SessionLocal()
+        yield db
+    finally:
+        db.close()
+
 class Book(BaseModel):
-    id: UUID
+    # id: UUID
     title: str = Field(min_length=1)
     author: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=100)
@@ -17,12 +30,22 @@ class Book(BaseModel):
 BOOKS = []
 
 @app.get("/")
-def read_api():
-    return BOOKS
+def read_api(db: Session = Depends(get_db)):
+    return db.query(models.Book).all()
 
 @app.post("/")
-def create_book(book: Book):
-    BOOKS.append(book)
+def create_book(book: Book, db: Session = Depends(get_db)):
+    # BOOKS.append(book)
+    
+    book_model = models.Book()
+    book_model.title = book.title
+    book_model.author = book.author
+    book_model.description = book.description
+    book_model.rating = book.rating
+
+    db.add(book_model)
+    db.commit()
+
     return book
 
 @app.put("/{book_id}")
